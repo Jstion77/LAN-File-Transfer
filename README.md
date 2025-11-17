@@ -1,5 +1,6 @@
 # 🚀 “码”上相传：一个轻量级局域网文件传输工具
 
+<img width="1816" height="840" alt="image" src="https://github.com/user-attachments/assets/32c0ea79-355c-4be5-adb6-5a63f4bb218b" />
 
 
 一个基于 Python (Flask + Waitress) 构建的、轻量级的局域网文件传输工具。它允许你在同一 WiFi (局域网)下的多个设备（电脑、手机、电视）之间，通过浏览器快速、安全地传输文件。
@@ -114,5 +115,6 @@ pip install pyinstaller
 ---
 
 ### 📝 许可证 (License)
+
 
 本项目采用 [MIT 许可证](LICENSE)。
