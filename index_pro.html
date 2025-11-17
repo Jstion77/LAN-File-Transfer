@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网文件传输</title>
+    <style>
+        :root {
+            --bg-color: #f9f9f9;
+            --container-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --header-bg: #f1f1f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap; /* 在小屏幕上换行 */
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .sidebar {
+            flex: 1; /* 占据 1 份 */
+            min-width: 300px; /* 最小宽度 */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .content {
+            flex: 2; /* 占据 2 份 */
+            min-width: 400px;
+        }
+        .card {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+
+        /* 二维码卡片 */
+        .qr-card { text-align: center; }
+        .qr-card img {
+            max-width: 250px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        .qr-card p {
+            font-size: 0.9em;
+            color: #555;
+            word-break: break-all;
+        }
+
+        /* 设备列表 */
+        .device-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .device-list li {
+            padding: 8px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+        .device-list li:last-child { border-bottom: none; }
+
+        /* 上传表单 */
+        .upload-form input[type="file"] {
+            display: block;
+            width: 95%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px dashed var(--border-color);
+            border-radius: 4px;
+        }
+        .upload-form input[type="submit"] {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+        .upload-form input[type="submit"]:hover { background-color: #0056b3; }
+
+        /* 文件列表 */
+        .file-list-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .file-list-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .file-list-table th, .file-list-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .file-list-table th {
+            background-color: var(--header-bg);
+            position: sticky;
+            top: 0;
+        }
+        .file-list-table td:last-child {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .file-list-table .filename {
+            max-width: 250px; /* 防止文件名过长 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-list-table a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .file-list-table a:hover { text-decoration: underline; }
+        .no-files {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+
+        <aside class="sidebar">
+            <div class="card qr-card">
+                <h2>扫码传输</h2>
+                <img src="data:image/png;base64,{{ qr_data }}" alt="QR Code">
+                <p>或在浏览器访问:<br><strong>{{ server_url }}</strong></p>
+            </div>
+
+            <div class="card device-list">
+                <h2>已连接设备</h2>
+                {% if active_devices %}
+                    <ul>
+                        {% for ip in active_devices %}
+                            <li>{{ ip }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>暂无其他设备连接...</p>
+                {% endif %}
+            </div>
+        </aside>
+
+        <main class="content">
+            <div class="card">
+                <h2>上传文件到 PC</h2>
+                <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                  <input type="file" name="file" multiple required>
+                  <input type="submit" value="开始上传">
+                </form>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <h2>PC 上的文件列表 ({{ files|length }})</h2>
+                <div class="file-list-container">
+                    {% if files %}
+                        <table class="file-list-table">
+                            <thead>
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>大小</th>
+                                    <th>上传时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr>
+                                    <td class="filename" title="{{ file.name }}">{{ file.name }}</td>
+                                    <td>{{ file.size }}</td>
+                                    <td>{{ file.time }}</td>
+                                    <td><a href="/download/{{ file.name }}">下载</a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="no-files">暂无文件，请从其他设备上传。</p>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+</body>
+</html>
